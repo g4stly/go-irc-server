@@ -3,7 +3,6 @@ package irc
 import (
 	"container/list"
 	"errors"
-	"flag"
 	"fmt"
 	"github.com/g4stly/kasumi/kasumi"
 	"log"
@@ -11,12 +10,8 @@ import (
 	"strings"
 )
 
-var debug = flag.Bool("d", false, "set the debug modus( print informations )")
-var realm = flag.String("realm", "192.168.0.103", "set the realm of server")
-var port  = flag.Uint("p", 6667, "set the port number")
-
 func Log(v ...string) {
-	if *debug == true {
+	if *kasumi.Debug == true {
 		log.Printf("IRC SRV: %s", fmt.Sprint(v))
 	}
 }
@@ -80,7 +75,7 @@ func (c *ClientChat) send_message(prefix string, command string, params ...strin
 	if len(prefix) != 0 {
 		msg = fmt.Sprintf(":%s %s", prefix, command)
 	} else {
-		msg = fmt.Sprintf(":%s %s", *realm, command)
+		msg = fmt.Sprintf(":%s %s", *kasumi.Realm, command)
 	}
 	for _, v := range params {
 		msg = msg + " " + v
@@ -214,7 +209,7 @@ func irc_JOIN(client *ClientChat, params []string) {
 	ch := client.get_channel(name)
 	ch.userjoin(client)
 
-	prefix := fmt.Sprintf("%s!~%s@%s", client.Name, client.Name, *realm)
+	prefix := fmt.Sprintf("%s!~%s@%s", client.Name, client.Name, *kasumi.Realm)
 	client.send_message(prefix, "JOIN", fmt.Sprintf(":%s", ch.Name))
 	send_client_list(client, ch)
 	client.send_message("", stn["RPL_TOPIC"], client.Name, ch.Name, fmt.Sprintf(":%s", ch.Topic))
@@ -247,7 +242,7 @@ func irc_PRIVMSG(client *ClientChat, params []string) {
 			ch := e.Value.(ChannelChat)
 			rec, err := ch.getuser(recipient)
 			if err == nil {
-				prefix := fmt.Sprintf("%s!~%s@%s", client.Name, client.Name, *realm)
+				prefix := fmt.Sprintf("%s!~%s@%s", client.Name, client.Name, *kasumi.Realm)
 				rec.send_message(prefix, "PRIVMSG", rec.Name, msg)
 			}
 		}
@@ -290,7 +285,7 @@ func irc_PART(client *ClientChat, params []string) {
 	*/
 	ch := client.get_channel(params[0])
 	ch.removeuser(client)
-	prefix := fmt.Sprintf("%s!~%s@%s", client.Name, client.Name, *realm)
+	prefix := fmt.Sprintf("%s!~%s@%s", client.Name, client.Name, *kasumi.Realm)
 	client.send_message(prefix, "PART", ch.Name, ":good bye")
 }
 
@@ -398,13 +393,13 @@ func Server(k chan kasumi.Conn) {
 
 	clientlist := list.New()
 	channellist := list.New()
-	netlisten, _ := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", *port))
+	netlisten, _ := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", *kasumi.Port))
 	defer netlisten.Close()
 
 	go func() {
 		for {
 			conn, err := netlisten.Accept()
-			if err != nil { 
+			if err != nil {
 				Log("main: netlisten.Accept() closure: ", err.Error())
 				break
 			}

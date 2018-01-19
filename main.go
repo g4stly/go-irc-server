@@ -1,12 +1,13 @@
 package main
 
 import (
-	"flag"
+	"os"
 	"log"
+	"strings"
 	"io/ioutil"
 	"github.com/g4stly/kasumi/irc"
-	"github.com/g4stly/kasumi/kasumi"
-	"os"
+	"github.com/g4stly/kasumi/discord"
+	_"github.com/g4stly/kasumi/kasumi"
 )
 
 /*
@@ -15,27 +16,23 @@ import (
  * IRC SERVER	: VIEW
  */
 
- /* TODO: flesh out discord.go, then flesh out kasumi.go */
+ /* TODO: create callbacks for discord bot, especially GETREADYEVENT and MESSAGERECIEVED */
 
 func main() {
-	flag.Parse()
 	/* read discord token */
 	t, err := ioutil.ReadFile("discord_token")
 	if err != nil {
 		log.Printf("Error reading discord token: %s", err)
 		os.Exit(-1)
 	}
-	log.Printf("Using token %s\n", strings.TrimSpace(string(t)))
 	/* initialize discord bot */
-	bot, err := discord.Initialize(strings.TrimSpace(string(t)))
+	bot, err := discord.New(strings.TrimSpace(string(t)))
 	if err != nil {
 		log.Printf("Failed to initialize discord bot: ", err.Error())
-		os.Exit(return -1)
+		os.Exit(-1)
 	}
-	go bot.Connect()
 	/* start up irc server */
-	c := make(chan kasumi.Conn)
-	irc.Server(c)
+	irc.Server(bot.C)
 
 	os.Exit(0)
 }
