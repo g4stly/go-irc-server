@@ -83,6 +83,13 @@ func (c *ClientChat) send_message(prefix string, command string, params ...strin
 	c.IN <- msg
 }
 
+func (c *ClientChat) create_channel(name string) *ChannelChat {
+	Log("ClientChat.create_channel()", "create new channel->", name)
+	ch := &ChannelChat{Name: name, UsersList: list.New()}
+	c.ListChannel.PushBack(*ch)
+	return ch
+}
+
 func (c *ClientChat) get_channel(name string) *ChannelChat {
 	Log("ClientChat.get_channel()", "List chan len->", fmt.Sprintf(":%d", c.ListChannel.Len()))
 	for e := c.ListChannel.Front(); e != nil; e = e.Next() {
@@ -92,10 +99,7 @@ func (c *ClientChat) get_channel(name string) *ChannelChat {
 			return &ch
 		}
 	}
-	Log("ClientChat.get_channel()", "create new channel->", name)
-	ch := &ChannelChat{Name: name, UsersList: list.New()}
-	c.ListChannel.PushBack(*ch)
-	return ch
+	return c.create_channel(name)
 }
 
 func (ch *ChannelChat) userjoin(user *ClientChat) {

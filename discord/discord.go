@@ -14,24 +14,39 @@ func Log(v ...string) {
 }
 
 type Bot struct {
-	C    chan kasumi.Conn
-	id   string
-	sess *discordgo.Session
-	quit chan int
+	id	string
+	sess	*discordgo.Session
+	quit	chan int
+}
+
+func (bot *Bot) ready(s *discordgo.Session, r *discordgo.Ready) {
+	Log("Bot: Got ready event")
+	bot.id = r.User.ID
+
+	for _, g := range r.Guilds {
+		kasumi.AddGuild(g)
+	}
+}
+
+func (bot *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	kasumi.CreateMessage(m.Author, m.ChannelID, m.Content)
 }
 
 func New(token string) (*Bot, error) {
 	/* initialize bot / discord session */
 	var err error
+	Log("Using token: ", token)
 	bot := &Bot{
-		C:    make(chan kasumi.Conn),
-		quit: make(chan int)}
+		quit:	make(chan int)}
 	bot.sess, err = discordgo.New(token)
 	if err != nil {
 		Log("discordgo.New(): ", err.Error())
 		return &Bot{}, err
 	}
 	Log("discord.New(): Session created, are we authorized?")
+	/* register callbacks here */
+	bot.sess.AddHandler(bot.ready)
+	bot.sess.AddHandler(bot.messageCreate)
 	/* connect to discord */
 	err = bot.sess.Open()
 	if err != nil {
@@ -39,8 +54,6 @@ func New(token string) (*Bot, error) {
 		return &Bot{}, err
 	}
 	Log("discord.New(): We are now allegedly connected.")
-
-	/* register callbacks here */
 
 	return bot, nil
 }

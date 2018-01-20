@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"github.com/g4stly/kasumi/irc"
 	"github.com/g4stly/kasumi/discord"
-	_"github.com/g4stly/kasumi/kasumi"
+	"github.com/g4stly/kasumi/kasumi"
 )
 
 /*
@@ -16,7 +16,6 @@ import (
  * IRC SERVER	: VIEW
  */
 
- /* TODO: create callbacks for discord bot, especially GETREADYEVENT and MESSAGERECIEVED */
 
 func main() {
 	/* read discord token */
@@ -26,13 +25,13 @@ func main() {
 		os.Exit(-1)
 	}
 	/* initialize discord bot */
-	bot, err := discord.New(strings.TrimSpace(string(t)))
+	_, err = discord.New(strings.TrimSpace(string(t)))
 	if err != nil {
 		log.Printf("Failed to initialize discord bot: ", err.Error())
 		os.Exit(-1)
 	}
 	/* start up irc server */
-	irc.Server(bot.C)
+	irc.Server(kasumi.ConnSpawner)
 
 	os.Exit(0)
 }
