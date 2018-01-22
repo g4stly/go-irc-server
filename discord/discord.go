@@ -14,18 +14,15 @@ func Log(v ...string) {
 }
 
 type Bot struct {
-	id	string
-	sess	*discordgo.Session
-	quit	chan int
+	id   string
+	sess *discordgo.Session
+	quit chan int
 }
 
 func (bot *Bot) ready(s *discordgo.Session, r *discordgo.Ready) {
-	Log("Bot: Got ready event")
+	Log("Bot: Got ready event!")
 	bot.id = r.User.ID
-
-	for _, g := range r.Guilds {
-		kasumi.AddGuild(g)
-	}
+	kasumi.AddGuilds(r.Guilds)
 }
 
 func (bot *Bot) messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -37,7 +34,7 @@ func New(token string) (*Bot, error) {
 	var err error
 	Log("Using token: ", token)
 	bot := &Bot{
-		quit:	make(chan int)}
+		quit: make(chan int)}
 	bot.sess, err = discordgo.New(token)
 	if err != nil {
 		Log("discordgo.New(): ", err.Error())

@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
-	"log"
-	"strings"
-	"io/ioutil"
-	"github.com/g4stly/kasumi/irc"
 	"github.com/g4stly/kasumi/discord"
+	"github.com/g4stly/kasumi/irc"
 	"github.com/g4stly/kasumi/kasumi"
+	"io/ioutil"
+	"log"
+	"os"
+	"strings"
 )
 
 /*
@@ -15,7 +15,6 @@ import (
  * KASUMI	: CONTROLLER
  * IRC SERVER	: VIEW
  */
-
 
 func main() {
 	/* read discord token */
