@@ -1,13 +1,14 @@
 package kasumi
 
 import (
-	"fmt"
+	"errors"
 	"flag"
+	"fmt"
+	"github.com/bwmarrin/discordgo"
 	"io"
 	"log"
-	"errors"
 	"net"
-	"github.com/bwmarrin/discordgo"
+	"strings"
 )
 
 func init() { flag.Parse() }
@@ -29,21 +30,27 @@ type Conn interface {
 }
 
 type FauxAddr struct {
-	net	string
-	addr	string
+	net  string
+	addr string
 }
 
 type FauxConn struct {
-	addr	*FauxAddr
-	IN	chan string
+	addr *FauxAddr
+	IN   chan string
 }
 
 type Client struct {
-	con	*FauxConn
-	user	*discordgo.User
+	con  *FauxConn
+	user *discordgo.User
+}
+
+type Channel struct {
+	name string
+	id   string
 }
 
 var clients map[string]*Client = make(map[string]*Client)
+var channels map[string]*Channel = make(map[string]*Channel)
 var ConnSpawner chan Conn = make(chan Conn)
 
 /*
@@ -80,10 +87,12 @@ func newFauxConn() *FauxConn {
 }
 
 func (con *FauxConn) Read(p []byte) (n int, err error) {
-	str	:= <-con.IN
-	max	:= len(p)
+	str := <-con.IN
+	max := len(p)
 	for n := 0; n < len(str); n++ {
-		if n > max { return n, errors.New("Read(): buffer is full")}
+		if n > max {
+			return n, errors.New("Read(): buffer is full")
+		}
 		p[n] = str[n]
 	}
 	return n, nil
@@ -115,6 +124,20 @@ func newClient(usr *discordgo.User) *Client {
 	return localClient
 }
 
+func (c *Client) joinIRCChannel(guild discordgo.Guild, channel *discordgo.Channel) {
+	dest, ok := channels[channel.ID]
+	if !ok {
+		channels[channel.ID] = newChannel(channel.Name, channel.ID)
+		dest = channels[channel.ID]
+	}
+	guildName := strings.Split(guild.Name, " ")
+	firstWordOfName := guildName[0]
+	if firstWordOfName == "The" {
+		firstWordOfName = guildName[1]
+	}
+	c.joinMsg(fmt.Sprintf("#" + firstWordOfName + dest.name))
+}
+
 func (c *Client) nickMsg(nick string) {
 	c.sendMessage(fmt.Sprintf("NICK %s", nick))
 }
@@ -128,12 +151,21 @@ func (c *Client) joinMsg(channel string) {
 }
 
 func (c *Client) say(id string, msg string) {
-	c.sendMessage(fmt.Sprintf("PRIVMSG #test %s", msg))
+	c.sendMessage(fmt.Sprintf("PRIVMSG %s %s", id, msg))
 }
 
 func (c *Client) sendMessage(msg string) {
 	Log("Client.sendMessage(): sending:", msg)
-	c.con.IN <- msg+"\r\n"
+	c.con.IN <- msg + "\r\n"
+}
+
+/*
+ * Channel Methods
+ */
+
+func newChannel(n string, i string) *Channel {
+	localChannel := &Channel{name: n, id: i}
+	return localChannel
 }
 
 /*
@@ -142,26 +174,26 @@ func (c *Client) sendMessage(msg string) {
 
 func AddGuilds(guilds []*discordgo.Guild) {
 	for _, g := range guilds {
+		Log("AddGuilds: Adding guild ", g.Name)
 		AddGuild(*g)
 	}
 }
 
 func AddGuild(guild discordgo.Guild) {
-	/* create a faux connection for each member */
-	Log("AddGuild: Registering users")
 	for _, m := range guild.Members {
-		clientID := m.User.Username+m.User.Discriminator
-		if client, ok := clients[clientID]; ok {
-			client.joinMsg("#test")
-			continue
+		client, ok := clients[m.User.ID]
+		if !ok {
+			clients[m.User.ID] = newClient(m.User)
+			client = clients[m.User.ID]
 		}
-		clients[clientID] = newClient(m.User)
-		clients[clientID].joinMsg("#test")
+		for _, c := range guild.Channels {
+			client.joinIRCChannel(guild, c)
+		}
 	}
 }
 
 func CreateMessage(user *discordgo.User, id string, msg string) {
-	clientID := user.Username+user.Discriminator
+	clientID := user.Username + user.Discriminator
 	client, ok := clients[clientID]
 	if !ok {
 		Log("CreateMessage(): Failed to retrieve client:", clientID)
@@ -169,4 +201,3 @@ func CreateMessage(user *discordgo.User, id string, msg string) {
 	}
 	client.say(id, msg)
 }
-
