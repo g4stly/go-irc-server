@@ -185,9 +185,9 @@ func AddGuild(guild discordgo.Guild) {
 		if !ok {
 			clients[m.User.ID] = newClient(m.User)
 			client = clients[m.User.ID]
-		}
-		for _, c := range guild.Channels {
-			client.joinIRCChannel(guild, c)
+			for _, c := range guild.Channels {
+				client.joinIRCChannel(guild, c)
+			}
 		}
 	}
 }
